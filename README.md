@@ -24,3 +24,12 @@ git clone https://github.com/Ardidini12/whatsapp.git
 cd whatsapp
 npm install
 
+CREATE DATABASE whatsapp_db;
+
+npm install sequelize sequelize-cli mysql2
+
+npx sequelize-cli db:migrate \
+  --url 'mysql://root:YOUR_PASSWORD@localhost/whatsapp_db' \
+  --migrations-path migrations/
+
+
