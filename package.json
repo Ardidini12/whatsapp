@@ -39,5 +39,8 @@
     "electron": "^35.0.1",
     "electron-installer-windows": "^3.0.0",
     "electron-packager": "^17.1.2"
+  },
+  "engines": {
+    "node": "18.x"
   }
 }
