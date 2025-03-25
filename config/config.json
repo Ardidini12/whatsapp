@@ -18,7 +18,7 @@
     "password": "Oysj7np4E0qQ",
     "database": "if0_38594675_wp",
     "host": "sql206.infinityfree.com",
-    "dialect": "mysql"
+    "dialect": "mysql2"
   },
   "isRegistered": false
 }
