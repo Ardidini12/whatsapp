@@ -18,6 +18,7 @@ const { Op } = require('sequelize');
 const schedule = require('node-schedule');
 const qrcode = require('qrcode');
 const { client } = require('../whatsappClient'); // Import the client
+const { sequelize } = require('../models'); // Import the sequelize instance
 
 // Middleware for session management
 router.use(session({
@@ -628,6 +629,17 @@ router.get('/qr-updates', (req, res) => {
     req.on('close', () => {
         clearInterval(interval);
     });
+});
+
+// Test database connection
+router.get('/test-db-connection', async (req, res) => {
+  try {
+    await sequelize.authenticate();
+    res.send('Database connection has been established successfully.');
+  } catch (error) {
+    console.error('Unable to connect to the database:', error);
+    res.status(500).send('Error connecting to the database.');
+  }
 });
 
 module.exports = router;
