@@ -14,10 +14,10 @@
     "dialect": "mysql"
   },
   "production": {
-    "username": "root",
-    "password": "root123",
-    "database": "wp",
-    "host": "127.0.0.1",
+    "username": "if0_38594675",
+    "password": "Oysj7np4E0qQ",
+    "database": "if0_38594675_wp",
+    "host": "sql206.infinityfree.com",
     "dialect": "mysql"
   },
   "isRegistered": false
