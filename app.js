@@ -42,6 +42,11 @@ app.get('/api/bulkData', async (req, res) => {
     }
 });
 
+// Root route handler
+app.get('/', (req, res) => {
+    res.redirect('/login');
+});
+
 // Start the server
 app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
