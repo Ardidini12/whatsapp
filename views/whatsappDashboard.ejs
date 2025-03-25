@@ -30,19 +30,23 @@
         
         <div class="status-box">
             <p class="status-text">
-                Status: <%= status ? 'Connected ✅' : 'Disconnected ❌' %>
+                Status: <span id="status"><%= status ? 'Connected ✅' : 'Disconnected ❌' %></span>
             </p>
             <% if (status) { %>
-                <p>Connected Phone: <%= phone %></p>
+                <p>Connected Phone: <span id="phoneNumber"><%= phone %></span></p>
             <% } %>
         </div>
     </div>
 
     <script>
-        // Auto-refresh every 5 seconds
-        setInterval(() => {
-            window.location.reload();
-        }, 5000);
+        const eventSource = new EventSource('/qr-updates');
+        eventSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            if (data.status === 'connected') {
+                document.getElementById('status').textContent = 'Connected ✅';
+                document.getElementById('phoneNumber').textContent = data.phoneNumber;
+            }
+        };
     </script>
 </body>
 </html> 

@@ -1,18 +1,18 @@
 const fs = require('fs');
 const csv = require('csv-parser');
 const xlsx = require('xlsx');
-const { Contact } = require('./models'); // Adjust the path as necessary
+const { Contact, Template } = require('./models'); // Ensure Template is imported
 const { sequelize } = require('./models');
 const path = require('path');
 
-const TEMPLATE_PATH = path.join(__dirname, 'message-templates.json');
+// Remove TEMPLATE_PATH and messageTemplates
+// const TEMPLATE_PATH = path.join(__dirname, 'message-templates.json');
+// let messageTemplates = JSON.parse(fs.readFileSync(TEMPLATE_PATH));
 
-// Load templates from JSON file
-let messageTemplates = JSON.parse(fs.readFileSync(TEMPLATE_PATH));
-
-function refreshTemplates() {
-    messageTemplates = JSON.parse(fs.readFileSync(TEMPLATE_PATH));
-}
+// Remove refreshTemplates function
+// function refreshTemplates() {
+//     messageTemplates = JSON.parse(fs.readFileSync(TEMPLATE_PATH));
+// }
 
 async function parseCSV(filePath) {
     return new Promise((resolve, reject) => {
@@ -43,11 +43,13 @@ async function processContacts(contacts, filename) {
 
     return contacts.map(contact => {
         // Normalize during import
-        const cleanNumber = contact.phone_number
-            .replace(/\D/g, '')
-            .replace(/^\+?0*/, '')
-            .replace(/\s+/g, '')
-            .replace(/^0+/, '');
+        const cleanNumber = typeof contact.phone_number === 'string' ?
+            contact.phone_number
+                .replace(/\D/g, '')
+                .replace(/^\+?0*/, '')
+                .replace(/\s+/g, '')
+                .replace(/^0+/, '') :
+            '';
 
         const isDuplicate = existingNumbers.has(cleanNumber);
         return {
@@ -73,20 +75,14 @@ async function getTodaysBirthdays() {
     return contacts;
 }
 
-function getMessageTemplate(contact) {
-    const availableTemplates = Object.keys(messageTemplates);
-    let templateName = contact.messageTemplate;
+async function getMessageTemplate(contact) {
+    // Fetch the default template from the database
+    const template = await Template.findOne({ where: { isDefault: true } });
     
-    if (!availableTemplates.includes(templateName)) {
-        templateName = availableTemplates.length > 0 
-            ? availableTemplates[0]
-            : 'system-default';
-    }
+    // Use the template description if found, otherwise use the fallback
+    const templateDescription = template ? template.description : "Happy Birthday {name}! 🎉 Wishing you a wonderful day!";
     
-    const template = messageTemplates[templateName] || 
-        "Happy Birthday {name}! 🎉 Wishing you a wonderful day!";
-    
-    return template
+    return templateDescription
         .replace(/{name}/g, contact.name)
         .replace(/{surname}/g, contact.surname);
 }
@@ -97,7 +93,5 @@ module.exports = {
     parseJSON,
     processContacts,
     getTodaysBirthdays,
-    messageTemplates,
-    refreshTemplates,
-    getMessageTemplate
+    getMessageTemplate // Export the updated function
 };

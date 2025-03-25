@@ -1,37 +1,30 @@
-<!-- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WhatsApp QR Code</title>
-    <script src="/socket.io/socket.io.js"></script>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #f0f8ff; }
+        #qrcode { margin: 20px auto; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-width: 300px; }
+    </style>
 </head>
 <body>
-    <h1>Scan the QR Code with WhatsApp</h1>
-    <div id="qrcode"></div>
+    <h1>Scan the QR Code</h1>
+    <div id="qrcode">
+        <img id="qrImage" src="<%= qrCodeDataUrl %>" alt="QR Code">
+    </div>
     <script>
-        const socket = io();
+        const eventSource = new EventSource('/qr-updates');
+        eventSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            document.getElementById('qrImage').src = data.qrCodeDataUrl;
 
-        socket.on('qr', (qr) => {
-            // Display the QR code as an image
-            document.getElementById('qrcode').innerHTML = '';
-            new QRCode(document.getElementById('qrcode'), qr);
-        });
+            if (data.status === 'connected') {
+                window.location.href = '/dashboard'; // Redirect to the dashboard
+            }
+        };
     </script>
 </body>
-</html> -->
-
-<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-<style>
-    body { background: #f0f8ff; }
-    #qrcode { margin: 20px auto; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-width: 300px; }
-</style>
-<body>
-    <div class="container text-center">
-        <h1 class="my-4">Scan the QR Code with WhatsApp</h1>
-        <div id="qrcode"></div>
-        <p class="mt-3">Open WhatsApp on your phone and scan the QR code to connect.</p>
-    </div>
-</body>
+</html>

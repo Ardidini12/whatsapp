@@ -15,6 +15,7 @@
             <li class="nav-item"><a href="/whatsappDashboard" class="nav-link">WhatsApp Status</a></li>
             <li class="nav-item"><a href="/todaysBirthdays" class="nav-link">🎂 View Today's Birthdays</a></li>
             <li class="nav-item"><a href="/whatsappMessages" class="nav-link">💬 WhatsApp Messages</a></li>
+            <li class="nav-item"><a href="/bulkMessageSender" class="nav-link">📧 Send Bulk Messages</a></li>
             <li class="nav-item"><a href="/templates" class="nav-link">📝 Message Templates</a></li>
             <li class="nav-item"><a href="/logout" class="nav-link">Logout</a></li>
         </ul>
@@ -26,6 +27,10 @@
             <h2>Birthday Management</h2>
             <a href="/todaysBirthdays" class="birthday-link">🎂 View Today's Birthdays</a>
         </div>
+        <div class="dashboard-section">
+            <h2>Bulk Message Sender</h2>
+            <a href="/bulkMessageSender" class="bulk-message-link">📧 Send Bulk Messages</a>
+        </div>
     </div>
     <style>
         body { background: #f0f8ff; }
@@ -35,6 +40,19 @@
         .dashboard-section { margin: 20px; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .birthday-link { display: inline-block; padding: 12px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; transition: background-color 0.3s; }
         .birthday-link:hover { background-color: #45a049; }
+        .bulk-message-link { display: inline-block; padding: 12px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; transition: background-color 0.3s; }
+        .bulk-message-link:hover { background-color: #45a049; }
     </style>
+    <script>
+        const eventSource = new EventSource('/qr-updates');
+        eventSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            document.getElementById('qrImage').src = data.qrCodeDataUrl;
+
+            if (data.status === 'connected') {
+                window.location.href = '/dashboard'; // Redirect to the dashboard
+            }
+        };
+    </script>
 </body>
 </html>

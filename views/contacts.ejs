@@ -41,19 +41,22 @@
         <form action="/add-contact" method="post" class="mb-3">
             <div class="form-row">
                 <div class="col">
-                    <input type="text" name="name" class="form-control" placeholder="Name" required>
+                    <input type="text" name="name" class="form-control" placeholder="Name">
                 </div>
                 <div class="col">
-                    <input type="text" name="surname" class="form-control" placeholder="Surname" required>
+                    <input type="text" name="surname" class="form-control" placeholder="Surname">
                 </div>
                 <div class="col">
-                    <input type="text" name="phone_number" class="form-control" placeholder="Phone Number" required>
+                    <input type="text" name="phone_number" value="<%= phone_number || '' %>" class="form-control <%= error && error.error === 'Duplicate phone number detected.' ? 'is-invalid' : '' %>" placeholder="Phone Number" required>
+                    <div class="invalid-feedback">
+                        Duplicate phone number detected.
+                    </div>
                 </div>
                 <div class="col">
                     <input type="email" name="email" class="form-control" placeholder="Email">
                 </div>
                 <div class="col">
-                    <input type="date" name="birthday" class="form-control" placeholder="Birthday" required>
+                    <input type="date" name="birthday" class="form-control" placeholder="Birthday">
                 </div>
             </div>
             <button type="submit" class="btn btn-success mt-2">Add Contact</button>
@@ -79,7 +82,7 @@
                         <td><%= contact.surname %></td>
                         <td><%= contact.phone_number %></td>
                         <td><%= contact.email %></td>
-                        <td><%= new Date(contact.birthday).toLocaleDateString('en-US', {month: 'short', day: '2-digit', year: 'numeric'}) %></td>
+                        <td><%= contact.birthday ? new Date(contact.birthday).toLocaleDateString('en-US', {month: 'short', day: '2-digit', year: 'numeric'}) : '' %></td>
                         <td><%= contact.source %></td>
                         <td>
                             <a href="/edit-contact/<%= contact.id %>" class="btn btn-warning btn-sm">Edit</a>
@@ -90,21 +93,6 @@
             </tbody>
         </table>
 
-        <!-- In the contact list -->
-        <% contacts.forEach(contact => { %>
-            <div class="contact">
-                <h3><%= contact.name %> <%= contact.surname %></h3>
-                <p>Phone: <%= contact.phone_number %></p>
-                <form action="/set-template/<%= contact.id %>" method="post">
-                    <select name="template" class="form-control">
-                        <option value="default" <%= contact.messageTemplate === 'default' ? 'selected' : '' %>>Default</option>
-                        <option value="formal" <%= contact.messageTemplate === 'formal' ? 'selected' : '' %>>Formal</option>
-                        <option value="funny" <%= contact.messageTemplate === 'funny' ? 'selected' : '' %>>Funny</option>
-                    </select>
-                    <button type="submit" class="btn btn-info mt-2">Save Template</button>
-                </form>
-            </div>
-        <% }); %>
     </div>
 </body>
 </html>

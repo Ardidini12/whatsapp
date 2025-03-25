@@ -16,11 +16,11 @@
     <div class="container">
         <h1 class="my-4">Edit Contact</h1>
         <form action="/edit-contact/<%= contact.id %>" method="POST" class="form-group">
-            <input type="text" name="name" value="<%= contact.name %>" class="form-control" required>
-            <input type="text" name="surname" value="<%= contact.surname %>" class="form-control" required>
+            <input type="text" name="name" value="<%= contact.name %>" class="form-control" >
+            <input type="text" name="surname" value="<%= contact.surname %>" class="form-control" >
             <input type="text" name="phone_number" value="<%= contact.phone_number %>" class="form-control" required>
             <input type="email" name="email" value="<%= contact.email %>" class="form-control">
-            <input type="date" name="birthday" value="<%= contact.birthday.toISOString().split('T')[0] %>" class="form-control" required>
+            <input type="date" name="birthday" value="<%= contact.birthday ? contact.birthday.toISOString().split('T')[0] : '' %>" class="form-control">
             <button type="submit" class="btn btn-primary">Update</button>
             <a href="/contacts" class="btn btn-secondary">Cancel</a>
         </form>

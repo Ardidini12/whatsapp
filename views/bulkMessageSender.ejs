@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bulk Message Sender</title>
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1 class="my-4">Bulk Message Sender</h1>
+    <p>Use this tool to send messages to multiple contacts at once.</p>
+    <div class="form-group">
+      <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
+    </div>
+
+    <!-- Template Selection -->
+    <h2>Select Template</h2>
+    <select id="templateSelect" class="form-control">
+      <option value="">Select a template</option>
+    </select>
+
+    <!-- Contact Selection -->
+    <h2>Select Contacts</h2>
+    <div id="contactLists"></div>
+
+    <!-- Schedule Button -->
+    <button id="scheduleButton" class="btn btn-primary mt-3">Schedule Bulk Messages</button>
+
+    <!-- Scheduled Messages -->
+    <h2>Scheduled Messages</h2>
+    <div id="scheduledMessages"></div>
+  </div>
+
+  <script>
+    $(document).ready(function() {
+      // Fetch data and populate dropdowns and contacts
+      $.ajax({
+        url: '/api/bulkData', // returns both templates and grouped contacts
+        method: 'GET',
+        success: function(data) {
+          const { groupedContacts, templates } = data;
+
+          // Populate template dropdown
+          templates.forEach(template => {
+            $('#templateSelect').append(`<option value="${template.id}">${template.templateName} - ${template.description}</option>`);
+          });
+
+          // Populate contact lists
+          for (let source in groupedContacts) {
+            let contactListHtml = `<h3>${source}</h3>
+                                   <button class="selectAllBtn">Select All</button>
+                                   <ul>`;
+            groupedContacts[source].forEach(contact => {
+              contactListHtml += `<li>
+                                    <input type="checkbox" class="contactCheckbox" value="${contact.id}"> 
+                                    ${contact.name} - ${contact.phone_number}
+                                  </li>`;
+            });
+            contactListHtml += '</ul>';
+            $('#contactLists').append(contactListHtml);
+          }
+
+          // Select all functionality
+          $('.selectAllBtn').click(function() {
+            const checkboxes = $(this).next('ul').find('.contactCheckbox');
+            const allChecked = checkboxes.length === checkboxes.filter(':checked').length;
+            checkboxes.prop('checked', !allChecked);
+          });
+        },
+        error: function() {
+          alert('Error fetching data');
+        }
+      });
+
+      // Load scheduled messages on page load
+      loadScheduledMessages();
+
+      // Optionally, refresh scheduled messages periodically (e.g., every second)
+      setInterval(loadScheduledMessages, 1000);
+
+      // Schedule button click event
+      $('#scheduleButton').click(function() {
+        const selectedTemplate = $('#templateSelect').val();
+        const selectedContacts = $('.contactCheckbox:checked').map(function() {
+          return $(this).val();
+        }).get();
+
+        if (!selectedTemplate || selectedContacts.length === 0) {
+          alert('Please select a template and at least one contact.');
+          return;
+        }
+
+        // Send scheduling request
+        $.ajax({
+          url: '/sendBulkMessages',
+          method: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify({ selectedTemplate, selectedContacts }),
+          success: function(scheduledMessages) {
+            // Get the actual scheduled time (button press time)
+            const scheduledTime = new Date();
+            const formattedScheduledTime = formatDateTime(scheduledTime);
+
+            // Add to display with correct scheduled time
+            scheduledMessages.forEach(message => {
+              $('#scheduledMessages ul').append(`
+                <li class="mb-2" id="message-${message.id}">
+                  <strong>${message.contactName}</strong><br>
+                  Scheduled at: ${formattedScheduledTime}<br>
+                  <span id="status-${message.id}">⏳ Sending in: ${calculateCountdown(message.scheduledTime)}</span>
+                </li>`
+              );
+            });
+            loadScheduledMessages();
+          },
+          error: function() {
+            alert('Error scheduling messages');
+          }
+        });
+      });
+    });
+
+    // Function to load scheduled messages from the database
+    function loadScheduledMessages() {
+      $.ajax({
+        url: '/api/scheduledMessages',
+        success: function(messages) {
+          let scheduledHtml = '<ul>';
+          messages.forEach(message => {
+            // Convert to proper Date object
+            const backendScheduledTime = new Date(message.scheduledTime);
+            // Calculate original scheduled time (button press time)
+            const originalScheduledTime = new Date(backendScheduledTime.getTime() - 60000);
+            
+            const formattedScheduledTime = formatDateTime(originalScheduledTime);
+            const status = message.status === 'sent' 
+              ? `✅ Sent at: ${formatDateTime(message.sentAt)}` 
+              : `⏳ Sending in: ${calculateCountdown(backendScheduledTime)}`;
+
+            scheduledHtml += `
+              <li class="mb-2" id="message-${message.id}">
+                <strong>${message.contactName}</strong><br>
+                Scheduled at: ${formattedScheduledTime}<br>
+                ${status}
+              </li>`;
+          });
+          $('#scheduledMessages').html(scheduledHtml);
+        },
+        error: function() {
+          console.log('Error fetching scheduled messages');
+        }
+      });
+    }
+
+    // Add this helper function
+    function calculateCountdown(scheduledTime) {
+      const scheduledDate = new Date(scheduledTime);
+      const now = new Date();
+      const diff = scheduledDate - now;
+      
+      if (diff <= 0) return '0 min 00 sec left';
+      
+      const minutes = Math.floor(diff / 60000);
+      const seconds = Math.floor((diff % 60000) / 1000);
+      return `${minutes} min ${seconds.toString().padStart(2, '0')} sec`;
+    }
+
+    // Function to format date and time
+    function formatDateTime(date) {
+      return new Date(date).toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+    }
+  </script>
+</body>
+</html>

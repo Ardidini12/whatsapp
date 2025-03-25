@@ -2,7 +2,9 @@
 const {
   Model
 } = require('sequelize');
-module.exports = (sequelize, DataTypes) => {
+module.exports = (sequelize) => {
+  const { DataTypes } = sequelize.Sequelize;
+
   class Contact extends Model {
     /**
      * Helper method for defining associations.
@@ -10,20 +12,39 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      // define association here
+      // A Contact can have many Messages
+      Contact.hasMany(models.Message, {
+        foreignKey: 'contactId',
+        as: 'messages'
+      });
     }
   }
   Contact.init({
-    name: DataTypes.STRING,
-    surname: DataTypes.STRING,
-    phone_number: DataTypes.STRING,
-    email: DataTypes.STRING,
-    birthday: DataTypes.DATE,
-    source: DataTypes.STRING,
-    messageTemplate: {
+    name: {
       type: DataTypes.STRING,
-      defaultValue: 'default'
-    }
+      allowNull: true
+    },
+    surname: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    phone_number: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      validate: {
+        isEmail: true
+      }
+    },
+    birthday: {
+      type: DataTypes.DATEONLY,
+      allowNull: true
+    },
+    source: DataTypes.STRING
   }, {
     sequelize,
     modelName: 'Contact',

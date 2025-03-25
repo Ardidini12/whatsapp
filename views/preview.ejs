@@ -35,7 +35,10 @@
                         <tr class="<%= contact.isDuplicate ? 'duplicate' : '' %>">
                             <td><input type="text" name="contacts[<%= index %>][name]" value="<%= contact.name %>" class="form-control"></td>
                             <td><input type="text" name="contacts[<%= index %>][surname]" value="<%= contact.surname %>" class="form-control"></td>
-                            <td><input type="text" name="contacts[<%= index %>][phone_number]" value="<%= contact.phone_number %>" class="form-control"></td>
+                            <td><input type="text" name="contacts[<%= index %>][phone_number]" value="<%= contact.phone_number %>" class="form-control <%= contact.isDuplicate ? 'is-invalid' : '' %>" required>
+                            <div class="invalid-feedback">
+                                Duplicate phone number detected.
+                            </div></td>
                             <td><input type="email" name="contacts[<%= index %>][email]" value="<%= contact.email %>" class="form-control"></td>
                             <td><input type="date" name="contacts[<%= index %>][birthday]" value="<%= contact.birthday %>" class="form-control"></td>
                             <td>
@@ -49,7 +52,10 @@
                     <% }) %>
                 </tbody>
             </table>
-            <button type="submit" class="btn btn-success">Confirm Import</button>
+            <div class="btn-group">
+                <button type="submit" class="btn btn-success">Confirm Import</button>
+                <a href="/contacts" class="btn btn-danger ml-2">Cancel Import</a>
+            </div>
         </form>
     </div>
     <script>

@@ -7,7 +7,15 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <style>
         .template-card { margin: 20px; padding: 20px; border: 1px solid #ddd; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        textarea { width: 100%; height: 100px; }
+        .message-content {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            line-height: 1.6;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+        }
         .delete-btn {
             background-color: #ff4444;
             color: white;
@@ -20,22 +28,47 @@
     <div class="container">
         <h1 class="my-4">Message Templates</h1>
         <a href="/dashboard" class="btn btn-secondary mb-3">← Back to Dashboard</a>
-        <% Object.keys(templates).forEach(key => { %>
-            <div class="template-card">
-                <h2><%= key.toUpperCase() %> Template</h2>
-                <form action="/update-template" method="post">
-                    <input type="hidden" name="templateName" value="<%= key %>">
-                    <textarea name="content" class="form-control mb-2"><%= templates[key] %></textarea>
-                    <button type="submit" class="btn btn-primary">Save</button>
-                    <button type="button" class="btn btn-danger delete-btn" data-toggle="modal" data-target="#deleteModal" data-template="<%= key %>">Delete</button>
-                </form>
-            </div>
+        <% templates.forEach(template => { %>
+            <% if (template.isDefault) { %>
+                <div class="template-card bg-light">
+                    <div class="badge badge-primary">System Default Birthday Template</div>
+                    <h2 class="mb-3"><%= template.templateName %></h2>
+                    <form action="/update-template/<%= template.id %>" method="POST">
+                        <div class="form-group">
+                            <label>Message Content</label>
+                            <textarea name="description" class="message-content"><%- template.description.trim() %></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Update Message</button>
+                    </form>
+                </div>
+            <% } else { %>
+                <div class="template-card">
+                    <form action="/update-template/<%= template.id %>" method="POST">
+                        <div class="form-group">
+                            <label>Template Name</label>
+                            <input type="text" name="templateName" value="<%= template.templateName %>" 
+                                   class="form-control mb-2" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Message Content</label>
+                            <textarea name="description" class="message-content"><%- template.description.trim() %></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                        <button type="button" class="btn btn-danger delete-btn" 
+                                data-toggle="modal" 
+                                data-target="#deleteModal" 
+                                data-id="<%= template.id %>">
+                            Delete
+                        </button>
+                    </form>
+                </div>
+            <% } %>
         <% }) %>
         <div class="add-template">
             <h2>➕ New Template</h2>
             <form action="/create-template" method="post">
-                <input type="text" name="templateName" class="form-control mb-2" placeholder="Template Key (e.g. 'christmas')" required>
-                <textarea name="content" class="form-control mb-2" placeholder="Template content..." required></textarea>
+                <input type="text" name="templateName" class="form-control mb-2" placeholder="Template Name" required>
+                <textarea name="description" class="message-content" placeholder="Template Description"></textarea>
                 <button type="submit" class="btn btn-success">Create Template</button>
             </form>
         </div>
@@ -66,11 +99,25 @@
     $(document).ready(function() {
         $('#deleteModal').on('show.bs.modal', function (event) {
             var button = $(event.relatedTarget);
-            var templateName = button.data('template');
+            var templateId = button.data('id');
             var modal = $(this);
+            
+            fetch(`/templates/${templateId}/delete-warning`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.warning) {
+                        modal.find('.modal-body').text(data.message);
+                    } else {
+                        modal.find('.modal-body').text('Are you sure you want to delete this template?');
+                    }
+                });
+
             modal.find('#confirmDeleteBtn').off('click').on('click', function() {
-                fetch(`/delete-template/${templateName}`, { method: 'DELETE' })
-                    .then(() => window.location.reload());
+                fetch(`/delete-template/${templateId}`, { method: 'DELETE' })
+                    .then(response => {
+                        if (response.ok) window.location.reload();
+                        else response.text().then(text => alert(text));
+                    });
                 modal.modal('hide');
             });
         });

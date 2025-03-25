@@ -3,20 +3,27 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('Templates', {
+    await queryInterface.createTable('ScheduledMessages', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      templateName: {
-        type: Sequelize.STRING,
-        allowNull: false
+      contactName: {
+        type: Sequelize.STRING
       },
-      description: {
-        type: Sequelize.STRING,
-        allowNull: true
+      scheduledTime: {
+        type: Sequelize.DATE
+      },
+      status: {
+        type: Sequelize.STRING
+      },
+      whatsappId: {
+        type: Sequelize.STRING
+      },
+      message: {
+        type: Sequelize.TEXT
       },
       createdAt: {
         allowNull: false,
@@ -29,7 +36,7 @@ module.exports = {
     });
   },
 
-  down: async (queryInterface) => {
-    await queryInterface.dropTable('Templates');
+  down: async (queryInterface, Sequelize) => {
+    await queryInterface.dropTable('ScheduledMessages');
   }
-}; 
+};

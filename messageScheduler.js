@@ -1,17 +1,18 @@
 const { getTodaysBirthdays, getMessageTemplate } = require('./contactUtils');
 const client = require('./whatsappClient');
-const { Contact } = require('./models');
+const { Contact, Message, Template } = require('./models');
 
 class MessageScheduler {
     constructor() {
         this.today = null;
         this.scheduledMessages = new Map();
         this.sentMessages = [];
+        this.canceledMessages = [];
         this.retryQueue = [];
         this.retryPolicy = {
             maxAttempts: 3,
             backoffFactor: 2, // Exponential backoff
-            initialDelay: 5 * 60 * 1000 // 5 minutes
+            initialDelay: 1 * 60 * 1000 // 1 minute
         };
         this.scheduleDailyJob();
         setInterval(() => this.cleanupMessages(), 60000);
@@ -59,35 +60,73 @@ class MessageScheduler {
 
         const cutoffTime = new Date(now);
         cutoffTime.setHours(10, 0, 0, 0);
+        const endOfDay = new Date(now);
+        endOfDay.setHours(19, 0, 0, 0);
         
         // Allow 1 minute buffer for scheduler initialization
-        if (now > cutoffTime + 60000) {
-            console.log('Skipping scheduling - past cutoff time');
+        if (now > endOfDay) {
+            console.log('Scheduling for the next day as current time is past 19:00');
+            this.today = (this.today + 1) % 31; // Simple increment, adjust for month-end
+            this.initializeScheduler();
             return;
         }
 
         const contacts = await getTodaysBirthdays();
-        const interval = 5 * 60 * 1000; // 5 minutes
+        const interval = 1 * 60 * 1000; // 1 minute
         
         console.log(`📅 Found ${contacts.length} birthdays to process`);
-        contacts.forEach((contact, index) => {
+        contacts.forEach(async (contact, index) => {
             const sendTime = new Date(cutoffTime.getTime() + (index * interval));
-            
-            // Ensure minimum 1 second delay
             const delay = Math.max(sendTime - Date.now(), 1000);
             
             if (delay > 0) {
+                // Fetch the latest default template from the database
+                const defaultTemplate = await Template.findOne({ where: { isDefault: true } });
+                const message = await getMessageTemplate(contact, defaultTemplate.description);
+
+                // Create or find the message in the database
+                let dbMessage = await Message.findOne({ 
+                    where: { 
+                        contactId: contact.id,
+                        status: ['scheduled', 'pending']
+                    }
+                });
+
+                if (!dbMessage) {
+                    dbMessage = await Message.create({
+                        contactId: contact.id,
+                        name: contact.name,
+                        surname: contact.surname,
+                        phone_number: contact.phone_number,
+                        message: message,
+                        status: 'scheduled',
+                        scheduledTime: sendTime
+                    });
+                } else {
+                    // Update existing message instead of creating new one
+                    await Message.update({
+                        message: message,
+                        scheduledTime: sendTime,
+                        status: 'scheduled' // Reset status if rescheduling
+                    }, { 
+                        where: { id: dbMessage.id } 
+                    });
+                }
+
+                // Store timeout ID for cancellation
+                const timeoutId = setTimeout(async () => {
+                    await this.sendMessage(contact);
+                }, delay);
+
                 this.scheduledMessages.set(contact.id, {
+                    dbId: dbMessage.id,
+                    timeoutId: timeoutId, // Store timeout reference
                     contact,
+                    message,
                     status: 'scheduled',
                     scheduledTime: sendTime,
                     attempts: 0
                 });
-
-                setTimeout(async () => {
-                    await this.sendMessage(contact);
-                    this.sendStatusUpdate(); // Trigger UI update
-                }, delay);
             }
             console.log(`⏳ Scheduled ${contact.name} for ${sendTime.toLocaleTimeString()}`);
         });
@@ -101,13 +140,25 @@ class MessageScheduler {
                 return;
             }
 
+            // Check if message was cancelled before sending
+            const dbMessage = await Message.findByPk(entry.dbId);
+            if (!dbMessage || dbMessage.status !== 'scheduled') {
+                console.log('Message cancelled, aborting send:', contact.name);
+                this.scheduledMessages.delete(contact.id);
+                return;
+            }
+
+            // Check if within valid time window
             const now = new Date();
             const cutoffTime = new Date(now);
             cutoffTime.setHours(10, 0, 0, 0);
+            const endOfDay = new Date(now);
+            endOfDay.setHours(19, 0, 0, 0);
             
-            // Check if within valid time window
-            if (now < cutoffTime || now > cutoffTime.setHours(23, 59, 59, 999)) {
-                this.updateMessageStatus(contact.id, 'failed', 'Outside scheduling window');
+            if (now < cutoffTime || now > endOfDay) {
+                this.updateMessageStatus(contact.id, 'scheduled', 'Outside scheduling window, rescheduled for next day');
+                this.today = (this.today + 1) % 31; // Simple increment, adjust for month-end
+                this.initializeScheduler();
                 return;
             }
 
@@ -117,7 +168,7 @@ class MessageScheduler {
                 return;
             }
 
-            const message = getMessageTemplate(contact, exists.messageTemplate || 'default');
+            const message = await getMessageTemplate(contact, exists.messageTemplate || 'default');
             
             // Robust phone number normalization
             const cleanNumber = contact.phone_number
@@ -135,6 +186,15 @@ class MessageScheduler {
 
             await client.sendMessage(whatsappId, message);
             console.log(`✅ Successfully sent to ${contact.name}`);
+
+            // Update THE SAME message entry
+            await Message.update({
+                status: 'sent',
+                sentAt: new Date()
+            }, {
+                where: { id: entry.dbId } // Update using the original message ID
+            });
+
             this.updateMessageStatus(contact.id, 'sent');
 
         } catch (error) {
@@ -143,12 +203,22 @@ class MessageScheduler {
         }
     }
 
-    updateMessageStatus(id, status, error = null) {
+    async updateMessageStatus(id, status, error = null) {
         const entry = this.scheduledMessages.get(id);
+        if (!entry) return;
+
+        await Message.update({
+            status: status,
+            ...(status === 'sent' && { sentAt: new Date() }),
+            ...(status === 'canceled' && { canceledAt: new Date() })
+        }, {
+            where: { contactId: id }
+        });
+
         entry.status = status;
         entry.error = error;
         entry.updatedAt = new Date();
-        
+
         if (status === 'sent') {
             this.sentMessages.push(entry);
             this.scheduledMessages.delete(id);
@@ -190,6 +260,26 @@ class MessageScheduler {
                 this.scheduledMessages.delete(key);
             }
         });
+    }
+
+    async cancelScheduledMessage(messageId) {
+        const entry = Array.from(this.scheduledMessages.values())
+            .find(e => e.dbId === messageId);
+        
+        if (entry) {
+            // Clear the timeout to prevent sending
+            clearTimeout(entry.timeoutId);
+            this.scheduledMessages.delete(entry.contact.id);
+            
+            await Message.update({ 
+                status: 'canceled',
+                canceledAt: new Date() 
+            }, { 
+                where: { id: messageId } 
+            });
+            
+            console.log(`🛑 Canceled scheduled message for ${entry.contact.name}`);
+        }
     }
 }
 

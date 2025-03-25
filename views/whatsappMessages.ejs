@@ -22,77 +22,140 @@
             <a href="/dashboard" class="btn btn-secondary mb-3">← Back to Dashboard</a>
         </nav>
         <div class="dashboard">
-            <!-- Scheduled Messages -->
+            <!-- Today's Scheduled Messages -->
             <div class="section">
-                <h2>📅 Scheduled Messages</h2>
-                <div id="scheduled-list" class="message-list">
-                    <!-- Dynamically populated -->
+                <h2>📅 Today's Scheduled Messages</h2>
+                <div id="todays-scheduled-list" class="message-list">
+                    <% todaysScheduled.forEach(msg => { %>
+                        <div class="message-card">
+                            <h3><%= msg.contact.name %></h3>
+                            <p>📱 <%= msg.contact.phone_number %></p>
+                            <p>📝 <%= msg.message %></p>
+                            <p>⏳ Time remaining: 
+                                <span class="time-remaining" data-time="<%= msg.scheduledTime %>">
+                                    <%= new Date(msg.scheduledTime).toLocaleString() %>
+                                </span>
+                            </p>
+                            <button class="btn btn-danger btn-sm cancel-btn" 
+                                    data-id="<%= msg.contact.id %>"
+                                    data-message-id="<%= msg.id %>">
+                                Cancel
+                            </button>
+                        </div>
+                    <% }) %>
                 </div>
             </div>
-            <!-- Sent Messages -->
+            <!-- Today's Sent Messages -->
             <div class="section">
-                <h2>📨 Sent Messages</h2>
-                <div id="sent-list" class="message-list">
-                    <!-- Dynamically populated -->
+                <h2>📨 Today's Sent Messages</h2>
+                <div id="todays-sent-list" class="message-list">
+                    <% todaysSent.forEach(msg => { %>
+                        <div class="message-card">
+                            <h3><%= msg.name %></h3>
+                            <p>📱 <%= msg.phone_number %></p>
+                            <p>📝 <%= msg.message %></p>
+                            <p>✅ Sent at: <%= new Date(msg.sentAt).toLocaleString() %></p>
+                        </div>
+                    <% }) %>
+                </div>
+            </div>
+            <!-- Today's Canceled Messages -->
+            <div class="section">
+                <h2>❌ Today's Canceled Messages</h2>
+                <div id="todays-cancelled-list" class="message-list">
+                    <% todaysCancelled.forEach(msg => { %>
+                        <div class="message-card">
+                            <h3><%= msg.name %></h3>
+                            <p>📱 <%= msg.phone_number %></p>
+                            <p>📝 <%= msg.message %></p>
+                            <p>🕒 Canceled at: <%= new Date(msg.canceledAt).toLocaleString() %></p>
+                        </div>
+                    <% }) %>
+                </div>
+            </div>
+            <!-- Overall History -->
+            <div class="section">
+                <h2>📅 Overall Scheduled Messages</h2>
+                <div id="overall-scheduled-list" class="message-list">
+                    <% overallScheduled.forEach(msg => { %>
+                        <div class="message-card">
+                            <h3><%= msg.name %></h3>
+                            <p>📱 <%= msg.phone_number %></p>
+                            <p>📝 <%= msg.message %></p>
+                            <p>⏳ Scheduled for: <%= new Date(msg.scheduledTime).toLocaleString() %></p>
+                        </div>
+                    <% }) %>
+                </div>
+            </div>
+            <div class="section">
+                <h2>📨 Overall Sent Messages</h2>
+                <div id="overall-sent-list" class="message-list">
+                    <% overallSent.forEach(msg => { %>
+                        <div class="message-card">
+                            <h3><%= msg.name %></h3>
+                            <p>📱 <%= msg.phone_number %></p>
+                            <p>📝 <%= msg.message %></p>
+                            <p>✅ Sent at: <%= new Date(msg.sentAt).toLocaleString() %></p>
+                        </div>
+                    <% }) %>
+                </div>
+            </div>
+            <div class="section">
+                <h2>❌ Overall Canceled Messages</h2>
+                <div id="overall-cancelled-list" class="message-list">
+                    <% overallCancelled.forEach(msg => { %>
+                        <div class="message-card">
+                            <h3><%= msg.name %></h3>
+                            <p>📱 <%= msg.phone_number %></p>
+                            <p>📝 <%= msg.message %></p>
+                            <p>🕒 Canceled at: <%= new Date(msg.canceledAt).toLocaleString() %></p>
+                        </div>
+                    <% }) %>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-    const eventSource = new EventSource('/api/message-status');
-    const scheduledList = document.getElementById('scheduled-list');
-    const sentList = document.getElementById('sent-list');
-
-    eventSource.onmessage = (e) => {
-        const data = JSON.parse(e.data);
-        
-        scheduledList.innerHTML = data.scheduled.map(msg => `
-            <div class="message-card">
-                <h3>${msg.contact.name}</h3>
-                <p>📱 ${msg.contact.phone_number}</p>
-                <p>⏳ ${formatTimeRemaining(msg.scheduledTime)} remaining</p>
-                <p>Status: ${msg.status}</p>
-            </div>
-        `).join('');
-
-        sentList.innerHTML = data.sent.map(msg => `
-            <div class="message-card">
-                <h3>${msg.contact.name}</h3>
-                <p>📱 ${msg.contact.phone_number}</p>
-                <p>✅ Sent at ${new Date(msg.updatedAt).toLocaleTimeString()}</p>
-            </div>
-        `).join('');
-    };
-
     function formatTimeRemaining(scheduledTime) {
         const now = new Date();
         const diff = new Date(scheduledTime) - now;
         
-        if (diff <= 0) return 'Due now';
+        if (diff <= 0) return 'Message due';
         
         const hours = Math.floor(diff / 3600000);
         const minutes = Math.floor((diff % 3600000) / 60000);
-        return `${hours}h ${minutes}m remaining`;
+        const seconds = Math.floor((diff % 60000) / 1000);
+        
+        return `${hours}h ${minutes}m ${seconds}s`;
     }
+
+    // Update all time-remaining elements every second
+    function updateTimeDisplays() {
+        document.querySelectorAll('.time-remaining').forEach(element => {
+            const scheduledTime = new Date(element.dataset.time);
+            element.textContent = formatTimeRemaining(scheduledTime);
+        });
+    }
+
+    // Initial update and set interval
+    updateTimeDisplays();
+    setInterval(updateTimeDisplays, 1000);
+
+    // Cancel button handling
+    $(document).on('click', '.cancel-btn', function() {
+        const messageId = $(this).data('message-id');
+        const confirmed = confirm('Are you sure you want to cancel this message?');
+        
+        if (confirmed) {
+            $.post(`/api/cancel-message/${messageId}`, function() {
+                // Remove the canceled message from the UI immediately
+                $(`[data-message-id="${messageId}"]`).closest('.message-card').remove();
+            }).fail(function() {
+                alert('Failed to cancel the message');
+            });
+        }
+    });
     </script>
-
-    <div class="message-status">
-        <h2>Scheduled Messages (<%= scheduled.length %>)</h2>
-        <% scheduled.forEach(msg => { %>
-            <div class="message-item">
-                <span><%= msg.contact.name %> - <%= msg.scheduledTime.toLocaleTimeString() %></span>
-                <span class="status-badge"><%= msg.status %></span>
-            </div>
-        <% }) %>
-
-        <h2>Sent Messages (<%= sent.length %>)</h2>
-        <% sent.forEach(msg => { %>
-            <div class="message-item">
-                <span><%= msg.contact.name %> - <%= msg.updatedAt.toLocaleString() %></span>
-                <span class="status-badge sent"><%= msg.status %></span>
-            </div>
-        <% }) %>
-    </div>
 </body>
 </html>
