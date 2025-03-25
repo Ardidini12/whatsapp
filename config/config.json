@@ -14,11 +14,11 @@
     "dialect": "mysql"
   },
   "production": {
-    "username": "if0_38594675",
-    "password": "Oysj7np4E0qQ",
-    "database": "if0_38594675_wp",
-    "host": "sql206.infinityfree.com",
+    "username": "u2ckvnubcdgpzh7r",
+    "password": "EgmNSF55LFG5W8adKoVR",
+    "database": "bsbcwpsce5k9qbobltyp",
+    "host": "bsbcwpsce5k9qbobltyp-mysql.services.clever-cloud.com",
     "dialect": "mysql"
-  },
+    },
   "isRegistered": false
 }
